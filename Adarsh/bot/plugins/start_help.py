@@ -34,7 +34,7 @@ else:
 
             
             
-@StreamBot.on_message((filters.command("start") | filters.regex('start⚡️')) & filters.private)
+@StreamBot.on_message((filters.command("start") | filters.regex('start⚡️')) & filters.private )
 async def start(b, m):
     # ── Token verification deep link handler ──────────────────
     args = m.text.split(None, 1)
@@ -45,7 +45,13 @@ async def start(b, m):
     # ─────────────────────────────────────────────────────────
 
     if not await db.is_user_exist(m.from_user.id):
-        # ... rest of your existing code unchanged
+        await db.add_user(m.from_user.id)
+        await b.send_message(
+            Var.BIN_CHANNEL,
+            f"**Nᴇᴡ Usᴇʀ Jᴏɪɴᴇᴅ:** \n\n__Mʏ Nᴇᴡ Fʀɪᴇɴᴅ__ [{m.from_user.first_name}](tg://user?id={m.from_user.id}) __Sᴛᴀʀᴛᴇᴅ Yᴏᴜʀ stream Bᴏᴛ !!__"
+        )
+    if Var.UPDATES_CHANNEL != "None":
+        try:
             user = await b.get_chat_member(Var.UPDATES_CHANNEL, m.chat.id)
             if user.status == "kicked":
                 await b.send_message(
@@ -55,7 +61,7 @@ async def start(b, m):
                 )
                 return
         except UserNotParticipant:
-             await StreamBot.send_photo(
+            await StreamBot.send_photo(
                 chat_id=m.chat.id,
                 photo="https://graph.org/file/68699ab6fc6e10570901a.jpg",
                 caption="♥⁠╣ 𝑱𝒐𝒊𝒏 𝑶𝒖𝒓 𝑴𝒐𝒗ie group 𝑻𝒐 𝑼𝒔𝒆 𝑻𝒉𝒊𝒔 𝑩𝒐𝒕 ⁠╠⁠♥",
@@ -66,14 +72,12 @@ async def start(b, m):
                         ]
                     ]
                 ),
-                
             )
-             return
+            return
         except Exception:
             await b.send_message(
                 chat_id=m.chat.id,
                 text="<i>𝓢𝓸𝓶𝓮𝓽𝓱𝓲𝓷𝓰 𝔀𝓮𝓷𝓽 𝔀𝓻𝓸𝓷𝓰</i> <b> <a href='https://t.me/imgoodboy99_bot'>CLICK HERE FOR SUPPORT </a></b>",
-                
                 disable_web_page_preview=True)
             return
     await StreamBot.send_photo(
