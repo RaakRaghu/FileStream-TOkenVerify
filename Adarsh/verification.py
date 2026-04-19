@@ -17,13 +17,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 verify_dict = {}
 
 # CONFIG VARIABLES 😄
-VERIFY_PHOTO = os.environ.get('VERIFY_PHOTO', '')  # YOUR VERIFY PHOTO LINK
-SHORTLINK_SITE = os.environ.get('SHORTLINK_SITE', '') # YOUR SHORTLINK URL LIKE:- site.com
-SHORTLINK_API = os.environ.get('SHORTLINK_API', '') # YOUR SHORTLINK API LIKE:- ma82owowjd9hw6_js7
-VERIFY_EXPIRE = os.environ.get('VERIFY_EXPIRE', 0) # VERIFY EXPIRE TIME IN SECONDS. LIKE:- 0 (ZERO) TO OFF VERIFICATION 
-VERIFY_TUTORIAL = os.environ.get('VERIFY_TUTORIAL', '') # LINK OF TUTORIAL TO VERIFY 
-DATABASE_URL = os.environ.get('DATABASE_URL', '') # MONGODB DATABASE URL To Store Verifications 
-COLLECTION_NAME = os.environ.get('COLLECTION_NAME', '')   # Collection Name For MongoDB 
+VERIFY_PHOTO = os.environ.get('VERIFY_PHOTO', 'https://i.pinimg.com/1200x/c5/9f/d2/c59fd21f87ecdc683f7c68813b601aa6.jpg')  # YOUR VERIFY PHOTO LINK
+SHORTLINK_SITE = os.environ.get('SHORTLINK_SITE', 'urlshortx.com') # YOUR SHORTLINK URL LIKE:- site.com
+SHORTLINK_API = os.environ.get('SHORTLINK_API', '16b4b94a0b23a343f4257d71ef15f7bca3acf27a') # YOUR SHORTLINK API LIKE:- ma82owowjd9hw6_js7
+VERIFY_EXPIRE = os.environ.get('VERIFY_EXPIRE', 3600 ) # VERIFY EXPIRE TIME IN SECONDS. LIKE:- 0 (ZERO) TO OFF VERIFICATION 
+VERIFY_TUTORIAL = os.environ.get('VERIFY_TUTORIAL', 'https://t.me/tutorialll566565') # LINK OF TUTORIAL TO VERIFY 
+DATABASE_URL = os.environ.get('DATABASE_URL', 'mongodb+srv://raakraghu:raakraghu@streamingrr.ym8sc0p.mongodb.net/?appName=streamingrr') # MONGODB DATABASE URL To Store Verifications 
+COLLECTION_NAME = os.environ.get('COLLECTION_NAME', 'streamingg')   # Collection Name For MongoDB 
 PREMIUM_USERS = list(map(int, os.environ.get('PREMIUM_USERS', '6805001741 7282828 292929').split()))
 
 missing = [v for v in ["COLLECTION_NAME", "VERIFY_PHOTO", "SHORTLINK_SITE", "SHORTLINK_API", "VERIFY_TUTORIAL"] if not v]; sys.exit(f"Missing: {', '.join(missing)}") if missing else None 
