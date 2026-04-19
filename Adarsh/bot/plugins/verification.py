@@ -53,8 +53,10 @@ async def token_system_filter(_, __, message):
         return False
     return True 
     
-@Client.on_message((filters.private|filters.group) & filters.incoming & filters.create(token_system_filter) & ~filters.bot)
+@Client.on_message(filters.private & ~filters.bot)
 async def global_verify_function(client, message):
+
+    # allow verify token
     if message.text:
         cmd = message.text.split()
         if len(cmd) == 2:
@@ -62,7 +64,11 @@ async def global_verify_function(client, message):
             if data.startswith("verify"):
                 await validate_token(client, message, data)
                 return
-    await send_verification(client, message)
+
+    # check verification
+    if not await is_user_verified(message.from_user.id):
+        await send_verification(client, message)
+        return
         
 # FUNCTIONS
 async def is_user_verified(user_id):
