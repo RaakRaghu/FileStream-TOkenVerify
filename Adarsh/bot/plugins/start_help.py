@@ -34,16 +34,18 @@ else:
 
             
             
-@StreamBot.on_message((filters.command("start") | filters.regex('start⚡️')) & filters.private )
+@StreamBot.on_message((filters.command("start") | filters.regex('start⚡️')) & filters.private)
 async def start(b, m):
+    # ── Token verification deep link handler ──────────────────
+    args = m.text.split(None, 1)
+    if len(args) > 1 and args[1].startswith("verify"):
+        from verification import validate_token
+        await validate_token(b, m, args[1])
+        return
+    # ─────────────────────────────────────────────────────────
+
     if not await db.is_user_exist(m.from_user.id):
-        await db.add_user(m.from_user.id)
-        await b.send_message(
-            Var.BIN_CHANNEL,
-            f"**Nᴇᴡ Usᴇʀ Jᴏɪɴᴇᴅ:** \n\n__Mʏ Nᴇᴡ Fʀɪᴇɴᴅ__ [{m.from_user.first_name}](tg://user?id={m.from_user.id}) __Sᴛᴀʀᴛᴇᴅ Yᴏᴜʀ stream Bᴏᴛ !!__"
-        )
-    if Var.UPDATES_CHANNEL != "None":
-        try:
+        # ... rest of your existing code unchanged
             user = await b.get_chat_member(Var.UPDATES_CHANNEL, m.chat.id)
             if user.status == "kicked":
                 await b.send_message(
