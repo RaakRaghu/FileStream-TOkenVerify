@@ -1,4 +1,4 @@
-from Adarsh import verification
+
 
 # (c) adarsh-goel
 import os
