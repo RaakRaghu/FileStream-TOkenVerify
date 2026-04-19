@@ -9,7 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
-from Adarsh.bot import StreamBot  # ← use your actual bot instance
+from Adarsh.bot import StreamBot
 
 verify_dict = {}
 
@@ -17,7 +17,7 @@ verify_dict = {}
 VERIFY_PHOTO     = os.environ.get('VERIFY_PHOTO', 'https://i.pinimg.com/1200x/c5/9f/d2/c59fd21f87ecdc683f7c68813b601aa6.jpg')
 SHORTLINK_SITE   = os.environ.get('SHORTLINK_SITE', 'urlshortx.com')
 SHORTLINK_API    = os.environ.get('SHORTLINK_API', '16b4b94a0b23a343f4257d71ef15f7bca3acf27a')
-VERIFY_EXPIRE    = int(os.environ.get('VERIFY_EXPIRE', 3600))   # ← always int
+VERIFY_EXPIRE    = int(os.environ.get('VERIFY_EXPIRE', 3600))
 VERIFY_TUTORIAL  = os.environ.get('VERIFY_TUTORIAL', 'https://t.me/tutorialll566565')
 DATABASE_URL     = os.environ.get('DATABASE_URL', 'mongodb+srv://raakraghu:raakraghu@streamingrr.ym8sc0p.mongodb.net/?appName=streamingrr')
 COLLECTION_NAME  = os.environ.get('COLLECTION_NAME', 'streamingg')
@@ -80,12 +80,11 @@ async def get_short_url(longurl):
         res = cget('GET', url, params=params)
         if res.status_code == 200 and res.text.strip():
             return res.text.strip()
-        # fallback: try json format
         params['format'] = 'json'
         res = cget('GET', url, params=params)
-        data = res.json()                          # ← parse to dict first
+        data = res.json()
         if res.status_code == 200:
-            return data.get('shortenedUrl', longurl)  # ← use longurl not long_url
+            return data.get('shortenedUrl', longurl)
     except Exception as e:
         print(f"Shortener error: {e}")
     return longurl
@@ -169,12 +168,15 @@ async def token_system_filter(_, __, message):
     (filters.private | filters.group)
     & filters.incoming
     & filters.create(token_system_filter)
-    & ~filters.bot
+    & ~filters.bot,
+    group=-1
 )
 async def global_verify_function(client, message):
     if message.text:
         cmd = message.text.split()
         if len(cmd) == 2 and cmd[1].startswith("verify"):
             await validate_token(client, message, cmd[1])
+            message.stop_propagation()
             return
     await send_verification(client, message)
+    message.stop_propagation()
