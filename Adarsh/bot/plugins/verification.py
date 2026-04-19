@@ -76,15 +76,14 @@ async def get_short_url(longurl):
     disable_warnings()
     try:
         url = f'https://{SHORTLINK_SITE}/api'
-        params = {'api': SHORTLINK_API, 'url': longurl, 'format': 'text'}
+        params = {'api': SHORTLINK_API, 'url': longurl}
         res = cget('GET', url, params=params)
-        if res.status_code == 200 and res.text.strip():
-            return res.text.strip()
-        params['format'] = 'json'
-        res = cget('GET', url, params=params)
-        data = res.json()
         if res.status_code == 200:
-            return data.get('shortenedUrl', longurl)
+            data = res.json()
+            if data.get('status') == 'success':
+                return data.get('shortenedUrl', longurl)
+            else:
+                print(f"Shortener error: {data}")
     except Exception as e:
         print(f"Shortener error: {e}")
     return longurl
