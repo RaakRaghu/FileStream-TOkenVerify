@@ -39,7 +39,7 @@ async def start(b, m):
     # ── Token verification deep link handler ──────────────────
     args = m.text.split(None, 1)
     if len(args) > 1 and args[1].startswith("verify"):
-        from verification import validate_token
+        from Adarsh.bot.plugins.verification import validate_token
         await validate_token(b, m, args[1])
         return
     # ─────────────────────────────────────────────────────────
