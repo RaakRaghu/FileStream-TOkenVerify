@@ -9,4 +9,5 @@ apscheduler
 requests
 psutil
 pyromod
-colorama
+colorama 
+cloudscraper
