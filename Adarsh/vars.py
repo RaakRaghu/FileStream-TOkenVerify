@@ -9,14 +9,14 @@ load_dotenv()
 
 class Var(object):
     MULTI_CLIENT = False
-    API_ID = int(getenv('API_ID', '25090882'))
-    API_HASH = str(getenv('API_HASH', '6aa9d30c71be8b8c3d74f5541318b201'))
-    BOT_TOKEN = str(getenv('BOT_TOKEN', '8108956872:AAFL7_Ka3Opad0zpWAC3u67H3E5YzoIcjUY'))
+    API_ID = int(getenv('API_ID', '38430849'))
+    API_HASH = str(getenv('API_HASH', 'a907a52b2d090dc307f781b2ef3e879e'))
+    BOT_TOKEN = str(getenv('BOT_TOKEN', '8761560258:AAHSyx2gPsZluki8XG-YROLsDNMfNdgPRhA'))
     name = str(getenv('name', 'filetolinkbot'))
     SLEEP_THRESHOLD = int(getenv('SLEEP_THRESHOLD', '60'))
     WORKERS = int(getenv('WORKERS', '4'))
-    BIN_CHANNEL = int(getenv('BIN_CHANNEL', '-1003189494068'))
-    PORT = int(getenv('PORT', '8091'))
+    BIN_CHANNEL = int(getenv('BIN_CHANNEL', '-1003613344939'))
+    PORT = int(getenv('PORT', '8099'))
     BIND_ADRESS = str(getenv('WEB_SERVER_BIND_ADDRESS', '0.0.0.0'))
     PING_INTERVAL = int(environ.get("PING_INTERVAL", "1200"))  # 20 minutes
     OWNER_ID = set(int(x) for x in os.environ.get("OWNER_ID", "7676516456").split())  
@@ -29,12 +29,12 @@ class Var(object):
     
     else:
         ON_HEROKU = False
-    FQDN = str(getenv('FQDN', '144.24.147.39:8091')) if not ON_HEROKU or getenv('FQDN', '144.24.147.39:8091') else APP_NAME+'.herokuapp.com'
+    FQDN = str(getenv('FQDN', '144.24.147.39:8099')) if not ON_HEROKU or getenv('FQDN', '144.24.147.39:8099') else APP_NAME+'.herokuapp.com'
     HAS_SSL=bool(getenv('HAS_SSL',False))
     if HAS_SSL:
         URL = "https://{}/".format(FQDN)
     else:
         URL = "http://{}/".format(FQDN)
-    DATABASE_URL = str(getenv('DATABASE_URL', 'mongodb+srv://rxalinks:rxalinks@rxalinks.u1sxsgv.mongodb.net/?appName=rxalinks'))
-    UPDATES_CHANNEL = str(getenv('UPDATES_CHANNEL', 'imgoogboy99b'))
+    DATABASE_URL = str(getenv('DATABASE_URL', 'mongodb+srv://raakraghu:raakraghu@streamingrr.ym8sc0p.mongodb.net/?appName=streamingrr'))
+    UPDATES_CHANNEL = str(getenv('UPDATES_CHANNEL', 'filestreamerfree'))
     BANNED_CHANNELS = list(set(int(x) for x in str(getenv("BANNED_CHANNELS", "")).split())) 
