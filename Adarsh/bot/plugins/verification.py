@@ -15,8 +15,8 @@ verify_dict = {}
 
 # CONFIG
 VERIFY_PHOTO     = os.environ.get('VERIFY_PHOTO', 'https://i.pinimg.com/1200x/c5/9f/d2/c59fd21f87ecdc683f7c68813b601aa6.jpg')
-SHORTLINK_SITE   = os.environ.get('SHORTLINK_SITE', 'urlshortx.com')
-SHORTLINK_API    = os.environ.get('SHORTLINK_API', '16b4b94a0b23a343f4257d71ef15f7bca3acf27a')
+SHORTLINK_SITE   = os.environ.get('SHORTLINK_SITE', 'adrinolinks.in')
+SHORTLINK_API    = os.environ.get('SHORTLINK_API', 'a7e4398219b62edc4b3aaadc52c6125d002157b6')
 VERIFY_EXPIRE    = int(os.environ.get('VERIFY_EXPIRE', 3600))
 VERIFY_TUTORIAL  = os.environ.get('VERIFY_TUTORIAL', 'https://t.me/tutorialll566565')
 DATABASE_URL     = os.environ.get('DATABASE_URL', 'mongodb+srv://raakraghu:raakraghu@streamingrr.ym8sc0p.mongodb.net/?appName=streamingrr')
