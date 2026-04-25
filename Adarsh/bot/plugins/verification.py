@@ -15,8 +15,8 @@ verify_dict = {}
 
 # CONFIG
 VERIFY_PHOTO     = os.environ.get('VERIFY_PHOTO', 'https://i.pinimg.com/1200x/c5/9f/d2/c59fd21f87ecdc683f7c68813b601aa6.jpg')
-SHORTLINK_SITE   = os.environ.get('SHORTLINK_SITE', 'adrinolinks.in')
-SHORTLINK_API    = os.environ.get('SHORTLINK_API', 'a7e4398219b62edc4b3aaadc52c6125d002157b6')
+SHORTLINK_SITE   = os.environ.get('SHORTLINK_SITE', 'urlshortx.com')
+SHORTLINK_API    = os.environ.get('SHORTLINK_API', '16b4b94a0b23a343f4257d71ef15f7bca3acf27a')
 VERIFY_EXPIRE    = int(os.environ.get('VERIFY_EXPIRE', 3600))
 VERIFY_TUTORIAL  = os.environ.get('VERIFY_TUTORIAL', 'https://t.me/tutorialll566565')
 DATABASE_URL     = os.environ.get('DATABASE_URL', 'mongodb+srv://raakraghu:raakraghu@streamingrr.ym8sc0p.mongodb.net/?appName=streamingrr')
@@ -49,6 +49,12 @@ class VerifyDB():
 
 verifydb = VerifyDB()
 
+# SETTINGS & PREMIUM DB
+_settings_client = AsyncIOMotorClient(DATABASE_URL)
+_settings_db = _settings_client['verify-db']
+settings_col = _settings_db['bot_settings']
+premium_col = _settings_db['premium_users']
+
 
 # HELPER FUNCTIONS
 def get_readable_time(seconds):
@@ -63,8 +69,24 @@ def get_readable_time(seconds):
 
 
 async def is_user_verified(user_id):
-    if not VERIFY_EXPIRE or (user_id in PREMIUM_USERS):
+    # Check if shortener is turned off from /settings
+    settings_doc = await settings_col.find_one({'key': 'shortener'})
+    shortener_enabled = settings_doc.get('enabled', True) if settings_doc else True
+    if not shortener_enabled:
+        return True  # shortener OFF = everyone bypasses verification
+
+    # Check if user is premium from DB
+    premium_doc = await premium_col.find_one({'user_id': user_id})
+    if premium_doc:
+        return True  # premium user = skip verification
+
+    # Check hardcoded premium users list
+    if user_id in PREMIUM_USERS:
         return True
+
+    if not VERIFY_EXPIRE:
+        return True
+
     isveri = await verifydb.get_verify_status(user_id)
     if not isveri or (time() - float(isveri)) >= float(VERIFY_EXPIRE):
         return False
