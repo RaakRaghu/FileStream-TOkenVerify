@@ -139,9 +139,10 @@ async def send_verification(client, message, text=None, buttons=None):
         verify_token = await get_verify_token(client, message.from_user.id, f"https://telegram.me/{username}?start=")
         if not buttons:
             buttons = InlineKeyboardMarkup([
-                [InlineKeyboardButton('🔗 Get Token', url=verify_token)],
-                [InlineKeyboardButton('🎬 Tutorial 🎬', url=VERIFY_TUTORIAL)]
-            ])
+    [InlineKeyboardButton('🔗 Get Token', url=verify_token)],
+    [InlineKeyboardButton('🎬 Tutorial 🎬', url=VERIFY_TUTORIAL)],
+    [InlineKeyboardButton('👑 Get Premium', callback_data='show_premium_plans')]
+])
     if not text:
         text = (
             f"<b>Hi 👋 {message.from_user.mention},\n"
@@ -185,6 +186,30 @@ async def validate_token(client, message, data):
         reply_to_message_id=message.id,
     )
 
+
+#owmer info for payment verification 
+OWNER_USERNAME = "nenustreamer"  # your username without @
+
+@StreamBot.on_callback_query(filters.regex("^show_premium_plans$"))
+async def show_premium_plans(client, callback):
+    await callback.answer()
+    await callback.message.reply(
+        "**👑 Premium Plans**\n\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "🥈 **1 Day** — Trial Plan\n"
+        "🥇 **7 Days** — Weekly Plan\n"
+        "💎 **30 Days** — Monthly Plan\n"
+        "🏆 **365 Days** — Yearly Plan\n"
+        "━━━━━━━━━━━━━━━━\n\n"
+        "✅ **Premium Benefits:**\n"
+        "• No ads token verification\n"
+        "• Unlimited access 24/7\n"
+        "• Priority support\n\n"
+        "📩 Contact owner to purchase a plan:",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("💬 Contact Owner", url=f"https://t.me/{OWNER_USERNAME}")]
+        ])
+    )
 
 # GLOBAL FILTER — intercepts all messages if not verified
 async def token_system_filter(_, __, message):
