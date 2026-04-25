@@ -73,12 +73,15 @@ async def is_user_verified(user_id):
     settings_doc = await settings_col.find_one({'key': 'shortener'})
     shortener_enabled = settings_doc.get('enabled', True) if settings_doc else True
     if not shortener_enabled:
-        return True  # shortener OFF = everyone bypasses verification
+        return True
 
-    # Check if user is premium from DB
-    premium_doc = await premium_col.find_one({'user_id': user_id})
-    if premium_doc:
-        return True  # premium user = skip verification
+    # Check premium with expiry from new premium system
+    try:
+        from Adarsh.bot.plugins.premium import is_premium
+        if await is_premium(user_id):
+            return True
+    except Exception:
+        pass
 
     # Check hardcoded premium users list
     if user_id in PREMIUM_USERS:
