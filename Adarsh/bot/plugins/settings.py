@@ -136,18 +136,20 @@ async def remove_premium_prompt(client, callback: CallbackQuery):
 async def add_premium_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can do this.")
-    args = message.text.split()
-    if len(args) != 2 or not args[1].isdigit():
-        return await message.reply("Usage: `/addpremium 1234567890`")
-    user_id = int(args[1])
-    await add_premium_user(user_id)
-    await message.reply(f"✅ User `{user_id}` added to premium!")
-
+    await message.reply(
+        "Use the new time-based command:\n\n"
+        "`/addpremium USER_ID DURATION`\n\n"
+        "Example: `/addpremium 1234567890 7d`"
+    )
 
 @StreamBot.on_message(filters.command("removepremium") & filters.private)
 async def remove_premium_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can do this.")
+    await message.reply(
+        "Use the command:\n\n"
+        "`/removepremium USER_ID`"
+    )
     args = message.text.split()
     if len(args) != 2 or not args[1].isdigit():
         return await message.reply("Usage: `/removepremium 1234567890`")
