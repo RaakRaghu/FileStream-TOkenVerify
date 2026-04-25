@@ -1,6 +1,6 @@
 # (c) adarsh-goel | indexing by RaakRaghu
 from motor.motor_asyncio import AsyncIOMotorClient
-from .vars import Var
+from Adarsh.vars import Var
 
 class Media:
     def __init__(self):
