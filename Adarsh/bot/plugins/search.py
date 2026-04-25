@@ -98,7 +98,42 @@ async def auto_index_handler(client, message):
         print(f"Auto index error: {e}")
 
 
-# ─── FORWARD INDEX — owner forwards files to bot ──────────
+# Track if owner is in index mode
+index_mode_users = set()
+
+
+# ─── MANUAL INDEX COMMAND ─────────────────────────────────
+
+@StreamBot.on_message(filters.command("index") & filters.private)
+async def manual_index_cmd(client, message):
+    if message.from_user.id != OWNER_ID:
+        return await message.reply("⛔ Only owner can run indexing.")
+
+    index_mode_users.add(OWNER_ID)
+    await message.reply(
+        "**📡 Index Mode ON ✅**\n\n"
+        "Now forward files from your channel to me.\n"
+        "I will index each one automatically.\n\n"
+        "Send /stopindex when you are done.\n\n"
+        f"📦 **Currently Indexed:** `{await get_total_indexed()}` files"
+    )
+
+
+@StreamBot.on_message(filters.command("stopindex") & filters.private)
+async def stop_index_cmd(client, message):
+    if message.from_user.id != OWNER_ID:
+        return await message.reply("⛔ Only owner can do this.")
+
+    index_mode_users.discard(OWNER_ID)
+    total = await get_total_indexed()
+    await message.reply(
+        f"**📡 Index Mode OFF ❌**\n\n"
+        f"Stopped indexing.\n"
+        f"📦 **Total Indexed:** `{total}` files"
+    )
+
+
+# ─── FORWARD INDEX — only when index mode is ON ───────────
 
 @StreamBot.on_message(
     filters.private
@@ -108,6 +143,10 @@ async def auto_index_handler(client, message):
     group=5
 )
 async def forward_index_handler(client, message):
+    # Only index if /index command was used first
+    if OWNER_ID not in index_mode_users:
+        return
+
     try:
         log_msg = await message.forward(chat_id=Var.BIN_CHANNEL)
         file_name = get_name(log_msg)
@@ -120,6 +159,7 @@ async def forward_index_handler(client, message):
         )
         if not file_id:
             return
+
         await save_file(
             file_id=file_id,
             file_name=file_name,
@@ -128,41 +168,14 @@ async def forward_index_handler(client, message):
             channel_id=message.forward_from_chat.id if message.forward_from_chat else 0
         )
         total = await get_total_indexed()
-        stream_link, download_link = build_links(log_msg.id, file_name)
         await message.reply(
-            f"✅ **Indexed & Saved!**\n\n"
+            f"✅ **Indexed!**\n\n"
             f"📂 `{file_name}`\n"
-            f"📦 Size: `{humanbytes(file_size)}`\n"
-            f"🗃 Total in DB: `{total}`\n\n"
-            f"🔗 **Stream:** {stream_link}\n"
-            f"⬇️ **Download:** {download_link}",
-            disable_web_page_preview=True
+            f"📦 Total in DB: `{total}`"
         )
     except Exception as e:
         print(f"Forward index error: {e}")
         await message.reply(f"❌ Error: `{e}`")
-
-
-# ─── MANUAL INDEX COMMAND ─────────────────────────────────
-
-@StreamBot.on_message(filters.command("index") & filters.private)
-async def manual_index_cmd(client, message):
-    if message.from_user.id != OWNER_ID:
-        return await message.reply("⛔ Only owner can run indexing.")
-    total = await get_total_indexed()
-    await message.reply(
-        "**📡 How To Index Files:**\n\n"
-        "**Method 1 — Forward files to me:**\n"
-        "1. Go to your index channel\n"
-        "2. Select files (hold tap → select multiple)\n"
-        "3. Forward them to me here\n"
-        "4. I will index each one automatically ✅\n\n"
-        "**Method 2 — Auto index:**\n"
-        "Post new files directly to your index channel.\n"
-        "I will index them automatically ✅\n\n"
-        f"📦 **Currently Indexed:** `{total}` files\n\n"
-        "Use /indexstats for more details."
-    )
 
 
 # ─── ADD ALLOWED INDEX CHANNEL ────────────────────────────
