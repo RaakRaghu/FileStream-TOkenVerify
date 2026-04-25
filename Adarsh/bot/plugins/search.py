@@ -1,24 +1,23 @@
-# (c) adarsh-goel | search & index by RaakRaghu
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.errors import FloodWait
 from urllib.parse import quote_plus
 from Adarsh.bot import StreamBot
 from Adarsh.utils.file_properties import get_name, get_hash, get_media_file_size
 from Adarsh.utils.human_readable import humanbytes
 from Adarsh.vars import Var
 
-# ── Pull everything from Var — no hardcoding ──────────────
-OWNER_ID = list(Var.OWNER_ID)[0]  # Var.OWNER_ID is a set
-BASE_URL = Var.URL                 # already "http://144.24.147.39:8099/"
+# ── All values from Var — no hardcoding ──────────────────
+OWNER_ID = list(Var.OWNER_ID)[0]
+BASE_URL = Var.URL
 
-# Channels to auto-index (add more with /addindexchannel)
 ALLOWED_INDEX_CHANNELS = [
-    int(Var.BIN_CHANNEL),          # -1003613344939 from your Var
+    int(Var.BIN_CHANNEL),
 ]
 
-# ── DB setup using Var.DATABASE_URL ───────────────────────
+# ── DB ────────────────────────────────────────────────────
 _client = AsyncIOMotorClient(Var.DATABASE_URL)
 _db = _client['verify-db']
 files_col = _db['indexed_files']
@@ -54,16 +53,20 @@ async def get_total_indexed():
     return await files_col.count_documents({})
 
 
-# ─── BUILD LINKS — uses Var.URL ───────────────────────────
+async def delete_file(file_id):
+    await files_col.delete_one({'file_id': file_id})
+
+
+# ─── BUILD LINKS ──────────────────────────────────────────
 
 def build_links(msg_id, file_name):
     encoded = quote_plus(file_name)
-    stream   = f"{BASE_URL}watch/{msg_id}/{encoded}"
+    stream = f"{BASE_URL}watch/{msg_id}/{encoded}"
     download = f"{BASE_URL}{msg_id}/{encoded}"
     return stream, download
 
 
-# ─── AUTO INDEX — listens to allowed channels ─────────────
+# ─── AUTO INDEX — listen to index & allowed channels ──────
 
 @StreamBot.on_message(
     filters.channel
@@ -79,10 +82,10 @@ async def auto_index_handler(client, message):
         file_name = get_name(log_msg)
         file_size = get_media_file_size(message)
         file_id = (
-            message.document.file_id  if message.document else
-            message.video.file_id     if message.video    else
-            message.audio.file_id     if message.audio    else
-            message.photo.file_id     if message.photo    else None
+            message.document.file_id if message.document else
+            message.video.file_id if message.video else
+            message.audio.file_id if message.audio else
+            message.photo.file_id if message.photo else None
         )
         if not file_id:
             return
@@ -93,9 +96,9 @@ async def auto_index_handler(client, message):
             msg_id=log_msg.id,
             channel_id=message.chat.id
         )
-        print(f"[AutoIndex] {file_name}")
+        print(f"Auto indexed: {file_name}")
     except Exception as e:
-        print(f"[AutoIndex Error] {e}")
+        print(f"Auto index error: {e}")
 
 
 # ─── FORWARD INDEX — owner forwards files to bot ──────────
@@ -113,13 +116,14 @@ async def forward_index_handler(client, message):
         file_name = get_name(log_msg)
         file_size = get_media_file_size(message)
         file_id = (
-            message.document.file_id  if message.document else
-            message.video.file_id     if message.video    else
-            message.audio.file_id     if message.audio    else
-            message.photo.file_id     if message.photo    else None
+            message.document.file_id if message.document else
+            message.video.file_id if message.video else
+            message.audio.file_id if message.audio else
+            message.photo.file_id if message.photo else None
         )
         if not file_id:
             return
+
         await save_file(
             file_id=file_id,
             file_name=file_name,
@@ -139,83 +143,98 @@ async def forward_index_handler(client, message):
             disable_web_page_preview=True
         )
     except Exception as e:
-        print(f"[ForwardIndex Error] {e}")
+        print(f"Forward index error: {e}")
         await message.reply(f"❌ Error: `{e}`")
 
 
-# ─── MANUAL /index COMMAND ────────────────────────────────
+# ─── MANUAL INDEX COMMAND ─────────────────────────────────
 
 @StreamBot.on_message(filters.command("index") & filters.private)
 async def manual_index_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can run indexing.")
+
     total = await get_total_indexed()
     await message.reply(
         "**📡 How To Index Files:**\n\n"
         "**Method 1 — Forward files to me:**\n"
-        "1. Go to your channel\n"
-        "2. Select files → Forward them here\n"
-        "3. I will index each one automatically ✅\n\n"
+        "1. Go to your index channel\n"
+        "2. Select files (hold tap → select multiple)\n"
+        "3. Forward them to me here\n"
+        "4. I will index each one automatically ✅\n\n"
         "**Method 2 — Auto index:**\n"
         "Post new files directly to your index channel.\n"
         "I will index them automatically ✅\n\n"
         f"📦 **Currently Indexed:** `{total}` files\n\n"
-        "Use /indexstats for details."
+        "Use /indexstats for more details."
     )
 
 
-# ─── ADD / REMOVE / LIST INDEX CHANNELS ──────────────────
+# ─── ADD ALLOWED INDEX CHANNEL ────────────────────────────
 
 @StreamBot.on_message(filters.command("addindexchannel") & filters.private)
 async def add_index_channel_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can do this.")
+
     args = message.text.split()
     if len(args) != 2:
         current = '\n'.join([f'`{ch}`' for ch in ALLOWED_INDEX_CHANNELS])
         return await message.reply(
-            f"**📡 Allowed Index Channels:**\n{current}\n\n"
-            f"**Usage:** `/addindexchannel -1001234567890`"
+            f"**📡 Allowed Index Channels:**\n\n{current}\n\n"
+            f"**Usage:** `/addindexchannel CHANNEL_ID`\n"
+            f"Example: `/addindexchannel -1001234567890`"
         )
+
     try:
         channel_id = int(args[1])
     except ValueError:
         return await message.reply("❌ Invalid channel ID.")
+
     if channel_id in ALLOWED_INDEX_CHANNELS:
-        return await message.reply(f"✅ `{channel_id}` already in list.")
+        return await message.reply(f"✅ Channel `{channel_id}` is already in the list.")
+
     ALLOWED_INDEX_CHANNELS.append(channel_id)
-    await message.reply(f"✅ `{channel_id}` added to index channels!")
+    await message.reply(
+        f"✅ Channel `{channel_id}` added to index list!\n\n"
+        f"Files posted in this channel will now be auto-indexed."
+    )
 
 
 @StreamBot.on_message(filters.command("removeindexchannel") & filters.private)
 async def remove_index_channel_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can do this.")
+
     args = message.text.split()
     if len(args) != 2:
-        return await message.reply("**Usage:** `/removeindexchannel -1001234567890`")
+        return await message.reply("**Usage:** `/removeindexchannel CHANNEL_ID`")
+
     try:
         channel_id = int(args[1])
     except ValueError:
         return await message.reply("❌ Invalid channel ID.")
+
     if channel_id not in ALLOWED_INDEX_CHANNELS:
-        return await message.reply(f"❌ `{channel_id}` not in list.")
+        return await message.reply(f"❌ Channel `{channel_id}` is not in the list.")
+
     ALLOWED_INDEX_CHANNELS.remove(channel_id)
-    await message.reply(f"✅ `{channel_id}` removed from index channels.")
+    await message.reply(f"✅ Channel `{channel_id}` removed from index list.")
 
 
 @StreamBot.on_message(filters.command("indexchannels") & filters.private)
 async def list_index_channels_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can view this.")
+
     current = '\n'.join([f'• `{ch}`' for ch in ALLOWED_INDEX_CHANNELS])
     await message.reply(
-        f"**📡 Index Channels:**\n\n{current}\n\n"
+        f"**📡 Currently Indexed Channels:**\n\n{current}\n\n"
         f"Total: `{len(ALLOWED_INDEX_CHANNELS)}` channels"
     )
 
 
-# ─── /search COMMAND ──────────────────────────────────────
+# ─── SEARCH COMMAND ───────────────────────────────────────
 
 @StreamBot.on_message(filters.command("search") & filters.private)
 async def search_cmd(client, message):
@@ -225,19 +244,26 @@ async def search_cmd(client, message):
         return await message.reply(
             f"**🔍 Search Files**\n\n"
             f"**Usage:** `/search Movie Name`\n\n"
-            f"📦 **Total Indexed:** `{total}` files"
+            f"**Examples:**\n"
+            f"`/search Pushpa 2`\n"
+            f"`/search Avengers`\n"
+            f"`/search KGF Hindi`\n\n"
+            f"📦 **Total Indexed Files:** `{total}`"
         )
+
     query = args[1].strip()
     if len(query) < 2:
-        return await message.reply("❌ Query too short. Use at least 2 characters.")
+        return await message.reply("❌ Search query too short. Use at least 2 characters.")
 
     searching_msg = await message.reply(f"🔍 Searching for `{query}`...")
     results = await search_files(query, limit=10)
 
     if not results:
-        return await searching_msg.edit(
-            f"❌ **No results for:** `{query}`\n\nTry different keywords."
+        await searching_msg.edit(
+            f"❌ **No results found for:** `{query}`\n\n"
+            f"Try different keywords or check spelling."
         )
+        return
 
     buttons = []
     for i, file in enumerate(results, 1):
@@ -256,8 +282,8 @@ async def search_cmd(client, message):
 
     await searching_msg.edit(
         f"🔍 **Results for:** `{query}`\n"
-        f"📊 Found `{len(results)}` file(s)\n\n"
-        f"👇 Select a file:",
+        f"📊 Found `{len(results)}` results\n\n"
+        f"👇 Select a file below:",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
@@ -272,46 +298,61 @@ async def search_info_callback(client, callback: CallbackQuery):
         return await callback.answer("File info not found.", show_alert=True)
     size = humanbytes(doc['file_size']) if doc['file_size'] else "Unknown"
     await callback.answer(
-        f"📂 {doc['file_name']}\n📦 {size}",
+        f"📂 {doc['file_name']}\n📦 Size: {size}",
         show_alert=True
     )
 
 
-# ─── /indexstats ──────────────────────────────────────────
+# ─── INDEX STATS ──────────────────────────────────────────
 
 @StreamBot.on_message(filters.command("indexstats") & filters.private)
 async def index_stats_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can view this.")
+
     total = await get_total_indexed()
+    channels = len(ALLOWED_INDEX_CHANNELS)
+
     await message.reply(
         f"**📊 Index Statistics**\n\n"
-        f"📦 **Total Files:** `{total}`\n"
-        f"📡 **Channels:** `{len(ALLOWED_INDEX_CHANNELS)}`\n\n"
-        + '\n'.join([f'• `{ch}`' for ch in ALLOWED_INDEX_CHANNELS])
+        f"📦 **Total Indexed Files:** `{total}`\n"
+        f"📡 **Indexed Channels:** `{channels}`\n\n"
+        f"**Channels:**\n" +
+        '\n'.join([f'• `{ch}`' for ch in ALLOWED_INDEX_CHANNELS])
     )
 
 
-# ─── /deleteindex ─────────────────────────────────────────
+# ─── DELETE FROM INDEX ────────────────────────────────────
 
 @StreamBot.on_message(filters.command("deleteindex") & filters.private)
 async def delete_index_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can do this.")
+
     args = message.text.split(None, 1)
     if len(args) < 2:
-        return await message.reply("**Usage:** `/deleteindex File Name`")
-    results = await search_files(args[1].strip(), limit=5)
-    if not results:
-        return await message.reply(f"❌ No files found matching `{args[1].strip()}`")
-    buttons = [[
-        InlineKeyboardButton(
-            f"🗑 {f['file_name'][:40]}",
-            callback_data=f"delfile_{f['file_id'][:20]}"
+        return await message.reply(
+            "**Usage:** `/deleteindex FILE_NAME`\n\n"
+            "Example: `/deleteindex Pushpa 2 Hindi`"
         )
-    ] for f in results]
+
+    query = args[1].strip()
+    results = await search_files(query, limit=5)
+
+    if not results:
+        return await message.reply(f"❌ No files found matching `{query}`")
+
+    buttons = []
+    for file in results:
+        buttons.append([
+            InlineKeyboardButton(
+                f"🗑 {file['file_name'][:40]}",
+                callback_data=f"delfile_{file['file_id'][:20]}"
+            )
+        ])
+
     await message.reply(
-        f"Found `{len(results)}` file(s). Tap to delete:",
+        f"Found {len(results)} files. Tap to delete from index:",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
@@ -320,10 +361,12 @@ async def delete_index_cmd(client, message):
 async def delete_file_callback(client, callback: CallbackQuery):
     if callback.from_user.id != OWNER_ID:
         return await callback.answer("⛔ Unauthorized!", show_alert=True)
+
     partial_id = callback.data.split("_")[1]
     doc = await files_col.find_one({'file_id': {'$regex': f'^{partial_id}'}})
     if not doc:
         return await callback.answer("File not found.", show_alert=True)
+
     await files_col.delete_one({'file_id': doc['file_id']})
-    await callback.answer("🗑 Deleted!", show_alert=True)
+    await callback.answer("🗑 Deleted from index!", show_alert=True)
     await callback.message.edit_text(f"✅ Deleted: `{doc['file_name']}` from index.")
