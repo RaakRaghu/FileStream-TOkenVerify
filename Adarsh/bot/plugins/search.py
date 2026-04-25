@@ -23,7 +23,6 @@ BASE_URL        = f"http://{FQDN}/"
 ALLOWED_INDEX_CHANNELS = [
     INDEX_CHANNEL,
     LOGS_CHANNEL,
-    # Add more channel IDs here later
 ]
 
 # DB
@@ -51,7 +50,6 @@ async def save_file(file_id, file_name, file_size, msg_id, channel_id):
 
 async def search_files(query: str, limit: int = 10):
     keywords = query.lower().split()
-    # All keywords must appear in file name
     regex = ''.join([f'(?=.*{kw})' for kw in keywords])
     cursor = files_col.find(
         {'file_name_lower': {'$regex': regex}}
@@ -87,9 +85,42 @@ def build_links(msg_id, file_name):
 async def auto_index_handler(client, message):
     if message.chat.id not in ALLOWED_INDEX_CHANNELS:
         return
-
     try:
-        # Forward to BIN_CHANNEL to get a permanent msg_id for links
+        log_msg = await message.forward(chat_id=Var.BIN_CHANNEL)
+        file_name = get_name(log_msg)
+        file_size = get_media_file_size(message)
+        file_id = (
+            message.document.file_id if message.document else
+            message.video.file_id if message.video else
+            message.audio.file_id if message.audio else
+            message.photo.file_id if message.photo else None
+        )
+        if not file_id:
+            return
+        await save_file(
+            file_id=file_id,
+            file_name=file_name,
+            file_size=file_size,
+            msg_id=log_msg.id,
+            channel_id=message.chat.id
+        )
+        print(f"Auto indexed: {file_name}")
+    except Exception as e:
+        print(f"Auto index error: {e}")
+
+
+# ─── FORWARD INDEX — owner forwards files to bot ──────────
+
+@StreamBot.on_message(
+    filters.private
+    & filters.forwarded
+    & (filters.document | filters.video | filters.audio | filters.photo)
+    & filters.user(OWNER_ID),
+    group=5
+)
+async def forward_index_handler(client, message):
+    """Index files forwarded by owner to bot privately."""
+    try:
         log_msg = await message.forward(chat_id=Var.BIN_CHANNEL)
         file_name = get_name(log_msg)
         file_size = get_media_file_size(message)
@@ -107,11 +138,17 @@ async def auto_index_handler(client, message):
             file_name=file_name,
             file_size=file_size,
             msg_id=log_msg.id,
-            channel_id=message.chat.id
+            channel_id=message.forward_from_chat.id if message.forward_from_chat else 0
         )
-        print(f"Auto indexed: {file_name}")
+        total = await get_total_indexed()
+        await message.reply(
+            f"✅ **Indexed!**\n\n"
+            f"📂 `{file_name}`\n"
+            f"📦 Total in DB: `{total}`"
+        )
     except Exception as e:
-        print(f"Auto index error: {e}")
+        print(f"Forward index error: {e}")
+        await message.reply(f"❌ Error: `{e}`")
 
 
 # ─── MANUAL INDEX COMMAND ─────────────────────────────────
@@ -121,62 +158,19 @@ async def manual_index_cmd(client, message):
     if message.from_user.id != OWNER_ID:
         return await message.reply("⛔ Only owner can run indexing.")
 
-    args = message.text.split()
-    channel_id = int(args[1]) if len(args) > 1 else INDEX_CHANNEL
-
-    status_msg = await message.reply(
-        f"🔄 **Starting Manual Index...**\n\n"
-        f"Channel: `{channel_id}`\n"
-        f"Please wait, this may take a while..."
-    )
-
-    count = 0
-    errors = 0
-
-    try:
-        async for msg in client.get_chat_history(channel_id):
-            if msg.document or msg.video or msg.audio or msg.photo:
-                try:
-                    log_msg = await msg.forward(chat_id=Var.BIN_CHANNEL)
-                    file_name = get_name(log_msg)
-                    file_size = get_media_file_size(msg)
-                    file_id = (
-                        msg.document.file_id if msg.document else
-                        msg.video.file_id if msg.video else
-                        msg.audio.file_id if msg.audio else
-                        msg.photo.file_id if msg.photo else None
-                    )
-                    if file_id:
-                        await save_file(
-                            file_id=file_id,
-                            file_name=file_name,
-                            file_size=file_size,
-                            msg_id=log_msg.id,
-                            channel_id=channel_id
-                        )
-                        count += 1
-                        if count % 20 == 0:
-                            await status_msg.edit(
-                                f"🔄 **Indexing...**\n\n"
-                                f"✅ Indexed: `{count}`\n"
-                                f"❌ Errors: `{errors}`"
-                            )
-                        await asyncio.sleep(0.5)
-                except FloodWait as e:
-                    await asyncio.sleep(e.value)
-                except Exception as ex:
-                    errors += 1
-                    print(f"Index error: {ex}")
-    except Exception as e:
-        await status_msg.edit(f"❌ Error: `{e}`")
-        return
-
-    total = await get_total_indexed()
-    await status_msg.edit(
-        f"✅ **Indexing Complete!**\n\n"
-        f"✅ Indexed: `{count}`\n"
-        f"❌ Errors: `{errors}`\n"
-        f"📦 Total in DB: `{total}`"
+    await message.reply(
+        "**📡 How To Index Files:**\n\n"
+        "Bots cannot fetch channel history directly.\n\n"
+        "**Method 1 — Forward files to me:**\n"
+        "1. Go to your index channel\n"
+        "2. Select files (hold tap → select multiple)\n"
+        "3. Forward them to me here\n"
+        "4. I will index each one automatically ✅\n\n"
+        "**Method 2 — Auto index:**\n"
+        "Post new files directly to your index channel.\n"
+        "I will index them automatically ✅\n\n"
+        f"📦 **Currently Indexed:** `{await get_total_indexed()}` files\n\n"
+        "Use /indexstats for more details."
     )
 
 
@@ -266,7 +260,6 @@ async def search_cmd(client, message):
         return await message.reply("❌ Search query too short. Use at least 2 characters.")
 
     searching_msg = await message.reply(f"🔍 Searching for `{query}`...")
-
     results = await search_files(query, limit=10)
 
     if not results:
@@ -276,20 +269,16 @@ async def search_cmd(client, message):
         )
         return
 
-    # Build inline buttons — 1 result per row with stream+download
     buttons = []
     for i, file in enumerate(results, 1):
         stream_link, download_link = build_links(file['msg_id'], file['file_name'])
         size = humanbytes(file['file_size']) if file['file_size'] else "Unknown"
-
-        # File name button (non-clickable label)
         buttons.append([
             InlineKeyboardButton(
                 f"🎬 {i}. {file['file_name'][:40]} [{size}]",
                 callback_data=f"search_info_{file['msg_id']}"
             )
         ])
-        # Stream + Download buttons
         buttons.append([
             InlineKeyboardButton("🖥 STREAM", url=stream_link),
             InlineKeyboardButton("📥 DOWNLOAD", url=download_link)
@@ -311,7 +300,6 @@ async def search_info_callback(client, callback: CallbackQuery):
     doc = await files_col.find_one({'msg_id': msg_id})
     if not doc:
         return await callback.answer("File info not found.", show_alert=True)
-
     size = humanbytes(doc['file_size']) if doc['file_size'] else "Unknown"
     await callback.answer(
         f"📂 {doc['file_name']}\n📦 Size: {size}",
