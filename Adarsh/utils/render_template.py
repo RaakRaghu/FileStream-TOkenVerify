@@ -20,17 +20,27 @@ async def render_page(id, secure_hash):
         async with aiofiles.open('Adarsh/template/req.html', encoding='utf-8') as r:
             heading = 'Watch {}'.format(file_data.file_name)
             tag = file_data.mime_type.split('/')[0].strip()
-            html = (await r.read()).replace('tag', tag).format(heading, file_data.file_name, src, src, src)
+            html = (await r.read()).replace('tag', tag)\
+                .replace('PLACEHOLDER_TITLE', heading)\
+                .replace('PLACEHOLDER_NAME', file_data.file_name)\
+                .replace('PLACEHOLDER_SRC', src)
     elif str(file_data.mime_type.split('/')[0].strip()) == 'audio':
         async with aiofiles.open('Adarsh/template/req.html', encoding='utf-8') as r:
             heading = 'Listen {}'.format(file_data.file_name)
             tag = file_data.mime_type.split('/')[0].strip()
-            html = (await r.read()).replace('tag', tag).format(heading, file_data.file_name, src, src, src)
+            html = (await r.read()).replace('tag', tag)\
+                .replace('PLACEHOLDER_TITLE', heading)\
+                .replace('PLACEHOLDER_NAME', file_data.file_name)\
+                .replace('PLACEHOLDER_SRC', src)
     else:
         async with aiofiles.open('Adarsh/template/dl.html', encoding='utf-8') as r:
             async with aiohttp.ClientSession() as s:
                 async with s.get(src) as u:
                     heading = 'Download {}'.format(file_data.file_name)
                     file_size = humanbytes(int(u.headers.get('Content-Length')))
-                    html = (await r.read()) % (heading, file_data.file_name, src, file_size)
+                    html = (await r.read())\
+                        .replace('PLACEHOLDER_TITLE', heading)\
+                        .replace('PLACEHOLDER_NAME', file_data.file_name)\
+                        .replace('PLACEHOLDER_SRC', src)\
+                        .replace('PLACEHOLDER_SIZE', file_size)
     return html
